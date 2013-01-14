@@ -1,4 +1,3 @@
-
 /**
  * Un modèle abstrait est une construction simpliste basée sur le souhait
  * que le développeur la réutilisant hérite de sa structure pour mettre 
@@ -37,17 +36,17 @@ function JSpNConfigurationManager() {
     
     
     /**
-        * Ajout d'une configuration dans le manager
-	 */
+     * Ajout d'une configuration dans le manager
+     */
     this.add = function(description) {
 	// TODO ajouter la description à la liste
     };
     
     /**
-        * Récupération de la configuration fonction
-	 * de l'id pour laquelle elle est référencé dans 
-	  * la configuration
-	   */
+     * Récupération de la configuration fonction
+     * de l'id pour laquelle elle est référencé dans 
+     * la configuration
+     */
     this.get = function(id) {
 	// TODO la récupération de la configuration
     };
@@ -63,8 +62,8 @@ function JSpNDao(configuration) {
     this._instance = null;
     
     /**
-        * Appel de la connexion à la base de donnée
-	 */
+     * Appel de la connexion à la base de donnée
+     */
     this.getInstance = function() {
 	if (this._instance != null) {
 	    return this._instance;
@@ -75,10 +74,10 @@ function JSpNDao(configuration) {
     };
     
     /**
-        * Recherche d'un ensemble d'élements relativement
-	 * aux critère des recherche de l'élément de recherche
-	  * que l'on passe en paramêtre
-	   */
+     * Recherche d'un ensemble d'élements relativement
+     * aux critère des recherche de l'élément de recherche
+     * que l'on passe en paramêtre
+     */
     this.get = function(name, search) {
 	// TODO Récupération de l'objet depuis la session ou la base de donnée
 	
@@ -92,8 +91,8 @@ function JSpNDao(configuration) {
     
     
     /**
-        * Suppression d'une entité de la base de donnée 
-	 */
+     * Suppression d'une entité de la base de donnée 
+     */
     this.remove = function(name, id) {
 	// recherche
 	
