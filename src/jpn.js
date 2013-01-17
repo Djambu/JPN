@@ -65,11 +65,16 @@ function JSpNDao(configuration) {
      * Appel de la connexion à la base de donnée
      */
     this.getInstance = function() {
-	if (this._instance != null) {
-	    return this._instance;
+	if (this._instance == null) {
+		// TODO création de la connexion avec la base de données
+		var requeteConnexion = window.indexedDB.open("catalogueJPN");
+		// Succes de l'ouverture
+		requeteConnexion.onsuccess = function(event) {
+			 this._instance = event.target.result;
+		};
+		// si échec instance toujours à null
 	}
-	
-	// TODO création de la connexion avec la base de donnée
+	return this._instance;
 	
     };
     
