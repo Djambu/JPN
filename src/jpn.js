@@ -29,17 +29,36 @@ function ModelJSpN(state) {
 }
 
 
-function JSpNConfigurationManager() {
+function JSpNConfigurationManager(dbname) {
     
+    /** Nom de la base de donnée */
+    this._dbname = dbname;
+
+
     /** Liste des configurations stockées dans le Manager*/
     this._objectStores = new Array();
-    
-    
+        
     /**
      * Ajout d'une configuration dans le manager
+     * La description d'un ObjectStore est spécifié
+     * dans 
      */
     this.add = function(description) {
-	// TODO ajouter la description à la liste
+	// On assure l'unicité de la configuration 
+	var i;
+	for (i = 0;
+	     i < this._objectStores.length &&
+	     description.name != this._objectStores[i].name; i++);
+	if (i == this.objectStores.length) {
+	    this._objectStore.append(description);
+	}
+    };
+
+    /**
+     * Renvois le nom de la base de donnée
+     */ 
+    this.getDbName = function() {
+	return this._dbname;
     };
     
     /**
@@ -47,8 +66,15 @@ function JSpNConfigurationManager() {
      * de l'id pour laquelle elle est référencé dans 
      * la configuration
      */
-    this.get = function(id) {
-	// TODO la récupération de la configuration
+    this.get = function(name) {
+	var i;
+        for (i = 0;
+             i < this._objectStores.length &&
+             description.name != this._objectStores[i].name; i++);
+        if (i == this.objectStores.length) {
+            return this._objectStore[i];
+        }
+
     };
 }
 
@@ -61,18 +87,28 @@ function JSpNDao(configuration) {
     /** Instance unique de la base de donnée */
     this._instance = null;
     
+
+    /**
+     * Gestion d'erreur des intéractions avec IndexedDB
+     */ 
+    this._defaultErrorLog = function(event) {
+	console.log("[Error] " + event);
+    };
+
     /**
      * Appel de la connexion à la base de donnée
      */
     this.getInstance = function() {
 	if (this._instance == null) {
-		// TODO création de la connexion avec la base de données
-		var requeteConnexion = window.indexedDB.open("catalogueJPN");
-		// Succes de l'ouverture
-		requeteConnexion.onsuccess = function(event) {
-			 this._instance = event.target.result;
-		};
-		// si échec instance toujours à null
+	    // TODO création de la connexion avec la base de données
+	    var requeteConnexion = window.indexedDB.open("catalogueJPN");
+	    // Succes de l'ouverture
+	    requeteConnexion.onsuccess = function(event) {
+		this._instance = event.target.result;
+	    };
+
+	    requeteConnexion.onerror = this._defaultErrorLog; 
+	    // si échec instance toujours à null
 	}
 	return this._instance;
 	
