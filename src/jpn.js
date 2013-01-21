@@ -126,70 +126,70 @@ function JPNDao(configuration) {
 	 * object : l'objet à ajouter
      */
     this.add = function(name, object) {
-		// récupération de la configuration correspondante à l'objet à ajouter
-		var _db = this.getInstance();
-		var _conf = this._manager.get(name);
-		if (_conf == null) {
-			throw "Absence de configuration pour ce type d'objet";
-		}
-		var _osname = _conf.objectStore; // nom de l'object store
+        // récupération de la configuration correspondante à l'objet à ajouter
+        var _db = this.getInstance();
+        var _conf = this._manager.get(name);
+        if (_conf == null) {
+            throw "Absence de configuration pour ce type d'objet";
+        }
+        var _osname = _conf.objectStore; // nom de l'object store
 		
-		if (!_db.objectStoreNames.contains(_osname)) {
-			// si l'object store n'existe pas encore
-			//    => premier ajout de ce type d'objet
-			//    on le crée
-			var _version = _db.version+1; 
-			_db.close();
-			// on est obligé de changer de version pour faire appel à l'évèn onupgradeneeded
-			// seul moyen de créer un objectstore
-			var _requete = window.indexedDB.open(this._manager.getDbName(), _version);
+        if (!_db.objectStoreNames.contains(_osname)) {
+            // si l'object store n'existe pas encore
+            //    => premier ajout de ce type d'objet
+            //    on le crée
+            var _version = _db.version+1; 
+            _db.close();
+            // on est obligé de changer de version pour faire appel à l'évèn onupgradeneeded
+            // seul moyen de créer un objectstore
+            var _requete = window.indexedDB.open(this._manager.getDbName(), _version);
 			
-			_requete.onupgradeneeded = function (event) {
-				this._instance = event.target.result;
-				this._instance.createObjectStore(_osname, { keyPath: _conf.primary, autoIncrement: false });
-			};
+            _requete.onupgradeneeded = function (event) {
+                this._instance = event.target.result;
+                this._instance.createObjectStore(_osname, { keyPath: _conf.primary, autoIncrement: false });
+            };
 			
-			_requete.onsuccess = function (event) {
-				this._instance = event.targer.result;
-				// on peut ajouter l'objet
-				var _transaction1 = _instance.transaction([_osname], IDBTransaction.READ_WRITE);
-				// récupération du catalogue d'objets
-				var _objStore = _transaction1.objectStore(_osname);
+            _requete.onsuccess = function (event) {
+                this._instance = event.targer.result;
+                // on peut ajouter l'objet
+                var _transaction1 = _instance.transaction([_osname], IDBTransaction.READ_WRITE);
+                // récupération du catalogue d'objets
+                var _objStore = _transaction1.objectStore(_osname);
 				
-				// TODO on fait quoi avec les objets dépendants => stranger
-				// ???????????????????????????????????
+                // TODO on fait quoi avec les objets dépendants => stranger
+                // ???????????????????????????????????
 				
-				_objStore.put(object);
+                _objStore.put(object);
 				
-				_transaction1.oncomplete = function() {
-					console.log("Succès de l'ajout dans le nouvel objectstore");
-				}
+                _transaction1.oncomplete = function() {
+                    console.log("Succès de l'ajout dans le nouvel objectstore");
+                }
 				
-				_transaction1.onerror = function() {
-					throw "Échec de l'insertion";
-				}
-			};
+                _transaction1.onerror = function() {
+                    throw "Échec de l'insertion";
+                }
+            };
 			
-			_requete.onerror = this._defaultErrorLog;
-		} else {
-			// l'object store existe déjà
-			var _transaction2 = _instance.transaction([_osname], IDBTransaction.READ_WRITE);
-			// récupération du catalogue d'objets
-			var _objStore2 = _transaction2.objectStore(_osname);
+            _requete.onerror = this._defaultErrorLog;
+        } else {
+            // l'object store existe déjà
+            var _transaction2 = _instance.transaction([_osname], IDBTransaction.READ_WRITE);
+            // récupération du catalogue d'objets
+            var _objStore2 = _transaction2.objectStore(_osname);
 			
-			// TODO on fait quoi avec les objets dépendants => stranger
-			// ???????????????????????????????????
+            // TODO on fait quoi avec les objets dépendants => stranger
+            // ???????????????????????????????????
 			
-			_objStore2.put(object);
+            _objStore2.put(object);
 			
-			_transaction2.oncomplete = function() {
-				console.log("Succès de l'ajout dans objectstore existant");
-			}
+            _transaction2.oncomplete = function() {
+                console.log("Succès de l'ajout dans objectstore existant");
+            }
 			
-			_transaction2.onerror = function() {
-				throw "Échec de l'insertion";
-			}
-		}
+            _transaction2.onerror = function() {
+                throw "Échec de l'insertion";
+            }
+        }
     };
     
     /**
