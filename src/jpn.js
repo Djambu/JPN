@@ -122,8 +122,8 @@ function JPNDao(configuration) {
 	
     /**
      * Ajout d'un objet dans la base de donnée s
-	 * name   : nom de la configuration
-	 * object : l'objet à ajouter
+     * name   : nom de la configuration
+     * object : l'objet à ajouter
      */
     this.add = function(name, object) {
         // récupération de la configuration correspondante à l'objet à ajouter
