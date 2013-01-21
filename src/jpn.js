@@ -107,7 +107,7 @@ function JPNDao(configuration) {
     this.getInstance = function() {
 	if (this._instance == null) {
 	    // création de la connexion avec la base de données
-	    var _requeteConnexion = window.indexedDB.open("catalogueJPN");
+	    var _requeteConnexion = window.indexedDB.open(this._manager.getDbName());
 	    // Succes de l'ouverture
 	    _requeteConnexion.onsuccess = function(event) {
 		this._instance = event.target.result;
