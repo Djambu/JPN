@@ -1,16 +1,58 @@
 <!DOCTYPE>
 <html lang="fr">
-<head>  
-  <meta charset="utf-8">
-  <title>JPN - Démonstration </title>
-  <script type="text/javascript" src="jpn.js"></script>
-  <script type="text/javascript" src="demo.js"></script>
+<head>
+<meta charset="utf-8">
+<title>JPN - Démonstration</title>
+<script charset="utf-8" src="http://code.jquery.com/jquery-1.5.min.js"></script>
+<script type="text/javascript" src="jpn.js"></script>
+<script type="text/javascript" src="demo.js"></script>
+<script type="text/javascript">
+  $(document).ready(function() {
+		$("#newdog").submit(function() {
+			var toAdd = {
+				name : document.getElementById("name_chien").value,
+				niche : document.getElementById("niche").value
+			};
+			daoChien.add(toAdd);
+			return false;
+		});
+
+		$("#clear").click(function() {
+			daoChien.clear();
+		});
+
+		$("#select").click(function() {
+			daoChien.getAllTheDog(function(dataSet) {
+				console.log(dataSet);
+				for (var i = 0; i < dataSet.length; i++) {
+					$("#field").html($("#field").text() + dataSet[i].name);
+				}
+			
+			});
+		});
+	});
+</script>
 </head>
 <body>
-  
-  <script type="text/javascript">
-    var dao = new DaoConcrete();
-    
-  </script> 
+	<h1>Ensemble de test sur la DAO</h1>
+	<fieldset>
+		<legend>Ajouter un element</legend>
+		<form action="" method="post" id="newdog">
+			<input type="text" name="chien" id="name_chien" /> <input
+				type="text" name="niche" id="niche" /> <input type="submit"
+				value="Enregistrer" />
+		</form>
+	</fieldset>
+
+
+	<div id="elements">
+		<pre id="field"></pre>
+		<button id="select">charger</button>
+		<button id="clear">Vider</button>
+	</div>
+	<script type="text/javascript">
+		var daoChien = new DaoChien(config);
+		console.log("Création de la DAO");
+	</script>
 </body>
 </html>
