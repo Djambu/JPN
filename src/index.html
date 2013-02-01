@@ -7,28 +7,63 @@
 <script type="text/javascript" src="jpn.js"></script>
 <script type="text/javascript" src="demo.js"></script>
 <script type="text/javascript">
-  $(document).ready(function() {
+	$(document).ready(function() {
+		var daoChien = new DaoChien();
+		var daoNiche = new DaoNiche();
+		console.log("Création de la DAO");
+		
 		$("#newdog").submit(function() {
-			var toAdd = {
-				name : document.getElementById("name_chien").value,
-				niche : document.getElementById("niche").value
+			var chien = {
+				nom : document.getElementById("name_chien").value,
+				niche : {
+					nom : document.getElementById("niche_name").value,
+					size : document.getElementById("niche_size").value
+				}
 			};
-			daoChien.add(toAdd);
+			daoChien.add(chien);
+			
 			return false;
 		});
 
-		$("#clear").click(function() {
+		$("#clear_chien").click(function() {
 			daoChien.clear();
 		});
+		
+		$("#clear_niche").click(function() {
+			daoNiche.clear();
+		});
 
-		$("#select").click(function() {
+		$("#select_chien").click(function() {
+			$("#field").html("");
 			daoChien.getAllTheDog(function(dataSet) {
-				console.log(dataSet);
 				for (var i = 0; i < dataSet.length; i++) {
-					$("#field").html($("#field").text() + dataSet[i].name);
+					$("#field").html($("#field").html() +" "
+							+dataSet[i].get("key")+ " " + dataSet[i].get("nom") +
+							" - "+dataSet[i].get("niche") +"<br/>");
 				}
 			
 			});
+		});
+		$("#select_niche").click(function() {
+			$("#field").html("");
+			daoNiche.getNiches(function(dataSet) {
+				console.log("Liste d'objets " + dataSet.length);
+
+				for (var i = 0; i < dataSet.length; i++) {
+					$("#field").html($("#field").html() + dataSet[i].get("nom") +
+							" - "+dataSet[i].get("size") +"<br/>");
+				}
+			
+			});
+		});
+		$("#seekdog").submit(function() {
+			daoChien.getById(document.getElementById("id_dog").value, function(chien) {
+				console.log(document.getElementById("id_dog").value);
+				$("#chien_affichage").html("");
+				$("#chien_affichage").html("[Chien] " + chien.get("nom") +" / " + chien.get("niche"));
+			});
+			
+			return false;
 		});
 	});
 </script>
@@ -38,21 +73,35 @@
 	<fieldset>
 		<legend>Ajouter un element</legend>
 		<form action="" method="post" id="newdog">
-			<input type="text" name="chien" id="name_chien" /> <input
-				type="text" name="niche" id="niche" /> <input type="submit"
-				value="Enregistrer" />
+			<input type="text" name="chien" id="name_chien" /> <br/>
+			 <fieldset>
+			 	<legend>Niche</legend>
+			 	<input type="text" name="niche_name" id="niche_name" />
+			 	<input type="text" name="niche_size" id="niche_size" />
+			 </fieldset>
+			 <input type="submit" value="Enregistrer" /> <br/>
+			
 		</form>
+	</fieldset>
+	<fieldset>
+		<legend>Chercher un chien</legend>
+		<form action="" method="post" id="seekdog">
+			<input type="text" name="id_dog" id="id_dog" />
+			<input type="submit" value="Chercher" />
+		</form>
+		<pre id="chien_affichage"></pre>
 	</fieldset>
 
 
 	<div id="elements">
 		<pre id="field"></pre>
-		<button id="select">charger</button>
-		<button id="clear">Vider</button>
+		<button id="select_chien">Charger l'ensemble des chiens</button>
+		<button id="select_niche">Charger l'ensemble des niches</button>
+		<button id="clear_chien">Vider chien</button>
+		<button id="clear_niche">Vider niche</button>
 	</div>
 	<script type="text/javascript">
-		var daoChien = new DaoChien(config);
-		console.log("Création de la DAO");
+		
 	</script>
 </body>
 </html>
