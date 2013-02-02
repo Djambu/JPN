@@ -60,7 +60,7 @@
 			daoChien.getById(document.getElementById("id_dog").value, function(chien) {
 				console.log(document.getElementById("id_dog").value);
 				$("#chien_affichage").html("");
-				$("#chien_affichage").html("[Chien] " + chien.get("nom") +" / " + chien.get("niche"));
+				$("#chien_affichage").html("[Chien] " + chien.get("nom") +" / " + chien.get("niche").nom);
 			});
 			
 			return false;
