@@ -1,5 +1,5 @@
 
-var config = new JSpNConfigurationManager("JPNTest");
+var config = new JSpNConfigurationManager("JPNTest2");
 config.add({
 	name: "chien",
 	objectStore: "chiendb",
@@ -118,7 +118,7 @@ function DaoChien() {
 	this.getById = function(id, callback) {
 		this.dao.getByKey(this.name, id, function(objet){
 			console.log(objet);
-			//callback(new ChienModel(objet));
+			callback(new ChienModel(objet));
 		});
 	};
 	
