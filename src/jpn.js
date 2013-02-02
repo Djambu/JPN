@@ -156,9 +156,10 @@ function JPNDao(configuration) {
 					for (var i = 0; i < aAjouter.length; i++) {
 						var conf = self.manager.getByDbName(aAjouter[i]);
 						self.instance.createObjectStore(aAjouter[i], {
-							keypath: conf['primary'], 
+							keypath: conf.primary, 
 							autoIncrement: true
-						});
+						}).createIndex(conf.primary, conf.primary, { unique: true });
+						console.log("Création de " + conf.objectStore + " avec pour clé " + conf.primary);
 					};
 					console.log("Mise à jour de la base de donnée");
 				};
@@ -293,15 +294,49 @@ function JPNDao(configuration) {
 				throw "Absence de configuration pour ce type d'objet " + conf;
 			}
 
-			var objectStore = self.instance.transaction([conf.objectStore], "readonly")
-			.objectStore(conf.objectStore);
-			
+			var transact = self.instance.transaction([conf.objectStore], "readonly");
+			var objectStore = transact.objectStore(conf.objectStore).index(conf.primary);
+
 			var request = objectStore.get(id);
+			console.log("Requete sur " + conf.name + " sur la clé " + id);
 			request.onsuccess = function(event) {
-				var object = event.target.result;
-				console.log(event);
-				traitement(object);
+				var objet = event.target.result;
+				if (conf.foreign != null) {
+
+					self.getForeign(name, 0, objet, traitement);
+
+					console.log("Fin de la reconstution de l'objet");
+					console.log(objet);
+				} else {
+					traitement(objet);
+				}
 			};
+		});
+	};
+
+	this.getForeign = function(name, index_cle, objet, callback) {
+		$.when(this.getInstance()).then(function(instance) {
+			var conf = self.manager.get(name);
+			if (conf == null) {
+				throw "Absence de configuration pour ce type d'objet " + conf;
+			}
+			if (index_cle >= conf.foreign.length) {
+				callback(objet);
+			} else {
+				var fConf = self.manager.get(conf.foreign[index_cle][0]);
+				console.log(fConf);
+				var transact = self.instance.transaction([fConf.objectStore], "readonly");
+				var objectStore = transact.objectStore(fConf.objectStore).index(fConf.primary);
+
+				var request = objectStore.get(objet[conf.foreign[index_cle][0]]);
+				request.onsuccess = function(event) {
+					var foreign = event.target.result;
+					objet[conf.foreign[index_cle][0]] = foreign;
+					console.log(objet);
+					self.getForeign(name, index_cle + 1 , objet, callback);
+				};
+			}
+
 		});
 	};
 
