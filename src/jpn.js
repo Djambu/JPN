@@ -5,6 +5,20 @@ if ('webkitIndexedDB' in window) {
 	window.IDBKeyRange = window.webkitIDBKeyRange;
 }
 
+function JPNException(id) {
+	
+	var exceptionListe = {
+		1: "UndefinedResult: the object returned by transaction is undefined",
+		2: "ConfigurationMissing: impossible to find a configuration in the manager",
+		3: "IncorrectObjectConfiguration: trying to insert an object" +
+				" with data structure different from that expected by the manager"
+	};
+	
+	throw "[Exception]: "+exceptionListe[id];
+
+};
+
+
 /**
  * Un modèle abstrait est une construction simpliste basée sur le souhait
  * que le développeur la réutilisant hérite de sa structure pour mettre 
@@ -196,14 +210,13 @@ function JPNDao(configuration) {
 		$.when(this.getInstance().then(function() {
 			var conf = self.manager.get(name);
 			if (conf == null) {
-				throw "Absence de configuration pour ce type d'objet";
+				new JPNException(2);
 			}
 
 			var objectStoreName = conf.objectStore;
 			var request = self.instance.transaction([objectStoreName], "readwrite");
 			var objectStore = request.objectStore(objectStoreName);
 			objectStore.clear();
-			console.log("cleared");
 			request.oncomplete = function() {
 				console.log(objectStoreName + " vidée");
 			};
@@ -222,17 +235,14 @@ function JPNDao(configuration) {
 		$.when(self.getInstance()).done(function(db){
 			var conf = self.manager.get(name);
 			if (conf == null) {
-				throw "Absence de configuration pour ce type d'objet " + conf;
+				new JPNException(2);
 			}
 
 			if (!self.manager.isCorrect(object, name)) {
-				throw "L'objet courant n'est pas conforme à la configuration attendue";
+				new JPNException(3);
 			}
 
 			var objectStoreName = conf.objectStore;
-			console.log("Nom de l'OStore selectionné: " + objectStoreName);
-
-			// Si l'objectStore n'est pas accessible
 
 			if (conf['foreign'] != null) {
 				// extraction de l'objet à ajouter
@@ -245,14 +255,6 @@ function JPNDao(configuration) {
 					self.add(osForeign, fObject);
 
 					object[osForeign] = fObject[FConf['primary']];
-					console.log("###############################################");
-					console.log("Affichage de l'ensemble des objets à inserer");
-					console.log("Objet : ");
-					console.log(object);
-					console.log("Objet étranger");
-					console.log(fObject);
-					console.log("###############################################");
-
 
 					var storageRequest = self.instance.transaction([objectStoreName], "readwrite");
 					var storage = storageRequest.objectStore(objectStoreName);
@@ -269,7 +271,6 @@ function JPNDao(configuration) {
 			} else {
 
 				var storageRequest = self.instance.transaction([objectStoreName], "readwrite");
-
 				var storage = storageRequest.objectStore(objectStoreName);
 				storage.put(object);
 
@@ -291,22 +292,20 @@ function JPNDao(configuration) {
 		$.when(self.getInstance()).then(function(){
 			var conf = self.manager.get(name);
 			if (conf == null) {
-				throw "Absence de configuration pour ce type d'objet " + conf;
+				new JPNException(2);
 			}
 
 			var transact = self.instance.transaction([conf.objectStore], "readonly");
 			var objectStore = transact.objectStore(conf.objectStore).index(conf.primary);
 
 			var request = objectStore.get(id);
-			console.log("Requete sur " + conf.name + " sur la clé " + id);
 			request.onsuccess = function(event) {
 				var objet = event.target.result;
+				if (objet == undefined) {
+					new JPNException(1);
+				}
 				if (conf.foreign != null) {
-
 					self.getForeign(name, 0, objet, traitement);
-
-					console.log("Fin de la reconstution de l'objet");
-					console.log(objet);
 				} else {
 					traitement(objet);
 				}
@@ -318,27 +317,28 @@ function JPNDao(configuration) {
 		$.when(this.getInstance()).then(function(instance) {
 			var conf = self.manager.get(name);
 			if (conf == null) {
-				throw "Absence de configuration pour ce type d'objet " + conf;
+				new JPNException();
 			}
 			if (index_cle >= conf.foreign.length) {
 				callback(objet);
 			} else {
 				var fConf = self.manager.get(conf.foreign[index_cle][0]);
-				console.log(fConf);
+
 				var transact = self.instance.transaction([fConf.objectStore], "readonly");
 				var objectStore = transact.objectStore(fConf.objectStore).index(fConf.primary);
 
 				var request = objectStore.get(objet[conf.foreign[index_cle][0]]);
 				request.onsuccess = function(event) {
 					var foreign = event.target.result;
+						
 					objet[conf.foreign[index_cle][0]] = foreign;
-					console.log(objet);
 					self.getForeign(name, index_cle + 1 , objet, callback);
 				};
 			}
 
 		});
 	};
+	
 
 	/**
 	 * Recherche d'un ensemble d'élements relativement
@@ -349,7 +349,7 @@ function JPNDao(configuration) {
 		$.when(self.getInstance()).then(function(){
 			var conf = self.manager.get(name);
 			if (conf == null) {
-				throw "Absence de configuration pour ce type d'objet " + conf;
+				new JPNException(2);
 			}
 
 			var objectStore = self.instance.transaction([conf.objectStore], "readonly")
@@ -367,7 +367,6 @@ function JPNDao(configuration) {
 					traitement(dataSet);
 				};
 			};
-
 		});
 	};
 
@@ -380,16 +379,16 @@ function JPNDao(configuration) {
 		$.when(self.getInstance()).then(function() {
 			var conf = self.manager.get(name);
 			if (conf == null) {
-				throw "Aucune configuration avec ce nom n'est repertoriée";
+				new JPNException();
 			}
 
 			// Suppression d'un item en base de donnée
-			var transaction = self.instance.transaction([conf.objectStore], "readwrite");
+			var transaction = self.instance.transaction([conf.objectStore], "readwrite").index(conf.primary);
 			var request = transaction.objectStore(conf.objectStore).delete(id);
 			request.onsuccess = function() {
 				console.log("Suppression de l'objet :" + id + " de l'objet " + conf.objectStore);
 			};
-			request.onerror = _defaultErrorLog;
+			request.onerror = self._defaultErrorLog;
 		});
 	};
 
@@ -397,8 +396,15 @@ function JPNDao(configuration) {
 	 * Modification d'un objet de la base de donnée 
 	 */
 	this.update = function(name, object) {
-		// Do nothing
+		var conf = self.manager.get(name);
+		if (conf == null) {
+			JPNException(2);
+		}
 
+		self.getByKey(name, object[conf.primary], function(old) {
+			self.remove(name, old[conf.primary]);
+			self.add(name, object);
+		});
 	};
 
 };
