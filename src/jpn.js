@@ -1,4 +1,3 @@
-
 window.indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
 if ('webkitIndexedDB' in window) {
 	window.IDBTransaction = window.webkitIDBTransaction;
@@ -313,14 +312,18 @@ function JPNDao(configuration) {
 		});
 	};
 
-	this.getForeign = function(name, index_cle, objet, callback) {
+	this.getForeign = function(name, index_cle, objet, callback, filtre) {
 		$.when(this.getInstance()).then(function(instance) {
 			var conf = self.manager.get(name);
 			if (conf == null) {
 				new JPNException();
 			}
 			if (index_cle >= conf.foreign.length) {
-				callback(objet);
+				if (!filtre) {
+					callback(objet);
+				} else {
+					callback(objet, filtre);
+				}
 			} else {
 				var fConf = self.manager.get(conf.foreign[index_cle][0]);
 
@@ -332,7 +335,12 @@ function JPNDao(configuration) {
 					var foreign = event.target.result;
 						
 					objet[conf.foreign[index_cle][0]] = foreign;
-					self.getForeign(name, index_cle + 1 , objet, callback);
+					
+					if (!filtre) {
+						self.getForeign(name, index_cle + 1 , objet, callback);
+					} else {
+						self.getForeign(name, index_cle + 1 , objet, callback, filtre);
+					}
 				};
 			}
 
@@ -345,7 +353,7 @@ function JPNDao(configuration) {
 	 * aux critère des recherche de l'élément de recherche
 	 * que l'on passe en paramêtre
 	 */
-	this.get = function(name, traitement) {
+	this.get = function(name, traitement, filtre) {
 		$.when(self.getInstance()).then(function(){
 			var conf = self.manager.get(name);
 			if (conf == null) {
@@ -364,7 +372,11 @@ function JPNDao(configuration) {
 					dataSet.push(object);
 					cursor.continue();
 				} else {
-					traitement(dataSet);
+					if (!filtre) {
+						traitement(dataSet);
+					} else {
+						traitement(dataSet, filtre);
+					}
 				};
 			};
 		});
@@ -381,11 +393,11 @@ function JPNDao(configuration) {
 			if (conf == null) {
 				new JPNException();
 			}
-
+			console.log(id);
 			// Suppression d'un item en base de donnée
-			var transaction = self.instance.transaction([conf.objectStore], "readwrite").index(conf.primary);
-			var request = transaction.objectStore(conf.objectStore).delete(id);
-			request.onsuccess = function() {
+			var transaction = self.instance.transaction([conf.objectStore], "readwrite");
+			var request = transaction.objectStore(conf.objectStore).delete(Number(id));
+			request.onsuccess = function(event) {
 				console.log("Suppression de l'objet :" + id + " de l'objet " + conf.objectStore);
 			};
 			request.onerror = self._defaultErrorLog;
