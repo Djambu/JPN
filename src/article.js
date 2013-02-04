@@ -1,12 +1,12 @@
 // JavaScript Document
-var config = new JPNConfigurationManager("appliJPNarticles");
+var config = new JPNConfigurationManager("test8");
 config.add({
-  name: "article",
+	name: "article",
 	objectStore: "articledb",
 	state: new Array("dateAjout", "titre", "description", "lien"),
 	primary: "dateAjout",
 	foreign: new Array(
-		new Array("lien", "simple")
+		new Array("lien", "one")
 	)
 });
 config.add({
