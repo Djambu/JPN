@@ -4,19 +4,167 @@ if ('webkitIndexedDB' in window) {
 	window.IDBKeyRange = window.webkitIDBKeyRange;
 }
 
+
+
+
 function JPNException(id) {
-	
+
 	var exceptionListe = {
-		1: "UndefinedResult: the object returned by transaction is undefined",
-		2: "ConfigurationMissing: impossible to find a configuration in the manager",
-		3: "IncorrectObjectConfiguration: trying to insert an object" +
-				" with data structure different from that expected by the manager"
+			1: "UndefinedResult: the object returned by transaction is undefined",
+			2: "ConfigurationMissing: impossible to find a configuration in the manager",
+			3: "IncorrectObjectConfiguration: trying to insert an object" +
+			" with data structure different from that expected by the manager",
+			4: "NoDataFound: no data found from this selection statement",
+			5: "StorageError: error while trying to store an object"
 	};
-	
+
 	throw "[Exception]: "+exceptionListe[id];
 
 };
 
+/**
+ * Filtre de recherche pour les données de selection JPN
+ * @returns un filtre sur les données extraites
+ */
+function JPNFiltre() {
+
+	this._champs_s = new Array();
+	this._criteresEt = new Array();
+	this._criteresFo = new Array();
+	this._criteresFac = new Array();
+
+
+	this.reset = function() {
+		this._champs_s = new Array();
+		this._criteresEt = new Array();
+		this._criteresFo = new Array();
+		this._criteresFac = new Array();
+	};
+
+	this.select = function() {
+		for (var i = 0; i < arguments.length; i++) {
+			this._champs_s.push(arguments[i]);
+		}
+	};
+
+	this.where = function(c, o, v) {
+		this._criteresEt.push({ champ : c, operateur : o, valeur : v });
+	};
+
+	this.where_foreign = function(f, c, o, v) {
+		this._criteresFo.push({ foreign :f, champ : c, operateur : o, valeur : v });
+	};
+
+	this.where_foreign_array_contain = function(f, t, c, v) {
+		this._criteresFac.push({ foreign :f, tableau : t, champ : c, valeur : v });
+	};
+
+	// cheat pour utiliser la fonction contains sur un tableau
+	Array.prototype.contains = function(obj) {
+		var i;
+		for ( i = 0; ( i<this.length ) && !( this[i]===obj ); i++);
+		return i!=this.length;
+	}
+
+	this.check = function(filtre, aVerifier) {
+
+		// critère &
+		for (var i=0; i<filtre._criteresEt.length; i++) {
+			var ss_filtre = filtre._criteresEt[i];
+
+			switch (ss_filtre.operateur) {
+			case '=' :
+				//
+				if (aVerifier[ss_filtre.champ] != ss_filtre.valeur) {
+					return false;
+				}
+				break;
+			case '>' :
+				//
+				if (aVerifier[ss_filtre.champ] <= ss_filtre.valeur) {
+					return false;
+				}
+				break;
+			case '<' :
+				//
+				if (aVerifier[ss_filtre.champ] >= ss_filtre.valeur) {
+					return false;
+				}
+				break;
+			case '>=' :
+				//
+				if (aVerifier[ss_filtre.champ] < ss_filtre.valeur) {
+					return false;
+				}
+				break;
+			case '<=' :
+				//
+				if (aVerifier[ss_filtre.champ] > ss_filtre.valeur) {
+					return false;
+				}
+				break;
+			}
+		}
+		// critère sur sous-objet
+
+		for (var i=0; i<filtre._criteresFo.length; i++) {
+			var ss_filtre = filtre._criteresFo[i];
+			switch (ss_filtre.operateur) {
+			case '=' :
+				//
+				if (aVerifier[ss_filtre.foreign][ss_filtre.champ] != ss_filtre.valeur) {
+					return false;
+				}
+				break;
+			case '>' :
+				//
+				if (aVerifier[ss_filtre.foreign][ss_filtre.champ] <= ss_filtre.valeur) {
+					return false;
+				}
+				break;
+			case '<' :
+				//
+				if (aVerifier[ss_filtre.foreign][ss_filtre.champ] >= ss_filtre.valeur) {
+					return false;
+				}
+				break;
+			case '>=' :
+				//
+				if (aVerifier[ss_filtre.foreign][ss_filtre.champ] < ss_filtre.valeur) {
+					return false;
+				}
+				break;
+			case '<=' :
+				//
+				if (aVerifier[ss_filtre.foreign][ss_filtre.champ] > ss_filtre.valeur) {
+					return false;
+				}
+				break;
+			}
+		}
+
+		// critere sur tableau dun sous objet
+
+		for (var i=0; i<filtre._criteresFac.length; i++) {
+			var ss_filtre = filtre._criteresFac[i];
+
+			var f = aVerifier[ss_filtre.foreign];
+			var tab = f[ss_filtre.tableau];
+
+			var z=0;
+			for (z=0; z<tab.length && tab[z][ss_filtre.champ]!= ss_filtre.valeur; z++);
+			if (z==tab.length) {
+				return false;
+			}
+		}
+
+		// ELSE else else
+		return true;
+
+	};
+
+
+}
 
 /**
  * Un modèle abstrait est une construction simpliste basée sur le souhait
@@ -148,7 +296,10 @@ function JPNDao(configuration) {
 		console.log("[Error] " + event);
 	};
 
-
+	ncé par sa clé primaire
+	 * @param name le nom de l'object store à atteindre
+	 * @param id la clé primaire de l'objet à traiter
+	 * @param traitement le callback à éxecuter
 
 	/**
 	 * Mise à jour de la base de donnée si nécessaire
@@ -226,7 +377,6 @@ function JPNDao(configuration) {
 	};
 
 
-
 	/**
 	 * Ajout d'un objet dans l'objectStore défini par le nom de 
 	 * configuration name.
@@ -262,12 +412,12 @@ function JPNDao(configuration) {
 					var storage = storageRequest.objectStore(objectStoreName);
 					storage.put(object);
 
-					storageRequest.oncomplete = function() {
-						console.log("Succès lors de l'ajout dans le nouvel objectStore");
+					storageRequest.oncomplete = function(event) {
+						console.log("Succès de l'ajout de l'objet dans " + objectStoreName);
 					};
 
 					storageRequest.onerror = function() {
-						throw "Echec lors de l'insertion";
+						new JPNException(5);
 					};
 				}
 			} else {
@@ -276,12 +426,12 @@ function JPNDao(configuration) {
 				var storage = storageRequest.objectStore(objectStoreName);
 				storage.put(object);
 
-				storageRequest.oncomplete = function() {
-					console.log("Succès lors de l'ajout dans le nouvel objectStore");
+				storageRequest.oncomplete = function(event) {
+					console.log("Succès de l'ajout de l'objet dans " + objectStoreName);
 				};
 
 				storageRequest.onerror = function() {
-					throw "Echec lors de l'insertion";
+					new JPNException(5);
 				};
 
 			}	
@@ -309,7 +459,7 @@ function JPNDao(configuration) {
 			request.onsuccess = function(event) {
 				var objet = event.target.result;
 				if (objet == undefined) {
-					new JPNException(1);
+					new JPNException(4);
 				}
 				if (conf.foreign != null) {
 					self.getForeign(name, 0, objet, traitement);
@@ -319,7 +469,7 @@ function JPNDao(configuration) {
 			};
 		});
 	};
-	
+
 	/**
 	 * Récupération de l'ensemble des objets composant d'un objet passé en paramêtre
 	 * Reconstitution complète de l'arbre des dépendances
@@ -350,9 +500,8 @@ function JPNDao(configuration) {
 				var request = objectStore.get(objet[conf.foreign[index_cle][0]]);
 				request.onsuccess = function(event) {
 					var foreign = event.target.result;
-						
 					objet[conf.foreign[index_cle][0]] = foreign;
-					
+
 					if (!filtre) {
 						self.getForeign(name, index_cle + 1 , objet, callback);
 					} else {
@@ -363,16 +512,16 @@ function JPNDao(configuration) {
 
 		});
 	};
-	
+
 
 	/**
 	 * Recherche d'un ensemble d'élements relativement
 	 * aux critère des recherche de l'élément de recherche
 	 * que l'on passe en paramêtre
-  	 * @param name le nom de l'object store ou se trouve l'objet à reconstruire
+	 * @param name le nom de l'object store ou se trouve l'objet à reconstruire
 	 * @param traitement le traitement à éxecuter sur le jeu de donnée
 	 * @param le filtre à mettre ene place sur le jeu de donnée
-     */
+	 */
 	this.get = function(name, traitement, filtre) {
 		$.when(self.getInstance()).then(function(){
 			var conf = self.manager.get(name);
@@ -388,7 +537,7 @@ function JPNDao(configuration) {
 				var cursor = event.target.result;
 				if (cursor) {
 					var object = cursor.value;
-					object.key = cursor.key;
+					object.key = cursor.key;throw "Echec lors de l'insertion";
 					dataSet.push(object);
 					cursor.continue();
 				} else {
@@ -404,7 +553,7 @@ function JPNDao(configuration) {
 
 	/**
 	 * Suppression d'une entité de l'objectStore 
-     * @param name le nom de l'object store à atteindre
+	 * @param name le nom de l'object store à atteindre
 	 * @param id la clé de l'élément à supprimer	 
 	 */
 	this.remove = function(name, id) {
@@ -425,7 +574,9 @@ function JPNDao(configuration) {
 	};
 
 	/**
-	 * Modification d'un objet de la base de donnée
+	 * Modification d'un objet de la base de donnée, pour ce faire, on supprime
+	 * l'ensemble des données concernant l'ancien objet et on stock le nouveau à 
+	 * sa place. /!\ La clé d'IDB en est modifiée.
 	 * @param name le nom de l'object store dans lequel se trouve l'objet à modifier
 	 */
 	this.update = function(name, object) {
@@ -441,6 +592,4 @@ function JPNDao(configuration) {
 	};
 
 };
-
-
 
