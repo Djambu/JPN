@@ -15,7 +15,8 @@ function JPNException(id) {
 			3: "IncorrectObjectConfiguration: trying to insert an object" +
 			" with data structure different from that expected by the manager",
 			4: "NoDataFound: no data found from this selection statement",
-			5: "StorageError: error while trying to store an object"
+			5: "StorageError: error while trying to store an object",
+			6: "OpenDbError: error while opening a database"
 	};
 
 	throw "[Exception]: "+exceptionListe[id];
@@ -196,8 +197,25 @@ function JPNModel(state) {
 	}
 }
 
-
-function JSpNConfigurationManager(dbname) {
+/**
+ * Manager d'un ensemble de configuration pour les objectStore d'une
+ * base de donnée. Le modèle géré est standard 
+ * {
+ *	name: "nom_config",
+ *	objectStore: "nom_object_store",
+ *	state: new Array([propriete1, propriete2, ...]),
+ *	primary: "nom_cle_primaire",
+ *	foreign: new Array(
+ *		[
+ *			new Array("nom_propriete_foreign", "simple | array" ),
+ *			...
+ *		]
+ *	  )
+ * }
+ * @param dbname le nom de la base de donnée à créer
+ * @return configuration de JPN à associer avec les DAO
+ */
+function JPNConfigurationManager(dbname) {
 
 	/** Nom de la base de donnée */
 	this._dbname = dbname;
@@ -258,7 +276,7 @@ con	 * @return le nom de la base de donnée concerné par cette figuation
 			return this._objectStores[i];
 		}
 
-	};
+	};self._defaultErrorLog
 
 	/**
 	 * Vérifie si l'object passé en paramètre correspond à la configuration
@@ -346,7 +364,9 @@ function JPNDao(configuration) {
 			self.instance = event.target.result;
 			deferred.resolve(self.instance);	
 		};
-		openRequest.onerror = self._defaultErrorLog;
+		openRequest.onerror = function(event) {
+			new JPNException(6);
+		};
 
 		return deferred.promise();
 	};
@@ -465,6 +485,7 @@ function JPNDao(configuration) {
 					traitement(objet);
 				}
 			};
+			request.onerror = self._defaultErrorLog;
 		});
 	};
 
@@ -506,6 +527,7 @@ function JPNDao(configuration) {
 						self.getForeign(name, index_cle + 1 , objet, callback, filtre);
 					}
 				};
+				request.onerror = self._defaultErrorLog;
 			}
 
 		});
@@ -543,9 +565,11 @@ function JPNDao(configuration) {
 						traitement(dataSet);
 					} else {
 						traitement(dataSet, filtre);
-					}
+					};
 				};
 			};
+			
+			on.onerror = self._defaultErrorLog;
 		});
 	};
 
