@@ -1,0 +1,179 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Portal</title>
+<link rel="stylesheet" type="text/css" href="normalize.css" />
+<link rel="stylesheet" type="text/css" href="style.css" />
+</head>
+<body>
+<header>
+  <h1><span>My portal</span></h1>
+    <div id="presentation">
+    <p><span class="q">"Q"</span> vous permet de conserver toutes les choses intéressantes que vous dénichez sur la toile et que vous souhaitez [re-]consulter plus tard<br/>Que ce soit des articles de presse, de sites e-commerce, de blog, de veille technologique, etc...<br/>Ne saturez plus vos favoris, et retrouvez facilement chaque article !</p>
+    </div>
+    <div id="actions">
+    <form name="recherche">
+    	<label for="rtag">Tag : </label><input type="text" name="rtag" />
+        <input type="submit" value="Afficher" />
+    	<input type="button" id="dropAll" value="Vider le portail"/>
+    </form>
+    </div>
+</header>
+<section id="articles">
+</section>
+<section id="ajout">
+
+<div class="ribbon"><div class="ribbon-stitches-top"></div><strong class="ribbon-content"><h1>Nouvel article</h1></strong><div class="ribbon-stitches-bottom"></div></div>
+
+	<form name="ajout">
+    	<fieldset>
+        	<legend>Article</legend>
+            <label for="titre">Titre</label><br/>
+    		<input type="text" name="titre" /><br/>
+        	<label for="description">Description</label><br/>
+        	<textarea name="description"></textarea>
+        </fieldset>
+    	<fieldset>
+        	<legend>Lien</legend>
+            <label for="site">Site</label><br/>
+    		<input type="text" name="site" /><br/>
+            <label for="url">URL</label><br/>
+    		<input type="text" name="url" /><br/>
+        	<label for="tags">Tags (séparés par des espaces)</label><br/>
+        	<textarea name="tags"></textarea>
+        </fieldset>
+        <input type="submit" value="Ajouter article" />
+    </form>
+</section>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
+<script src="jpn.js"></script>
+<script src="filtre.js"></script>
+<script src="article.js"></script>
+<script>
+	$(document).ready(function() {
+		var daoArticle = new DaoArticle();
+		var daoLien = new DaoLien();
+		console.log("Création de la DAO");
+		
+		
+		$('form[name="ajout"]').submit(function() {
+			// alert($('input[name="titre"]').val());
+			if ($('input[name="titre"]').val() == '') {
+				return false;
+			}
+			var aujourdhui = new Date();
+			var d = aujourdhui.getFullYear()+"-"+aujourdhui.getMonth()+"-"+aujourdhui.getDate()+"-"+aujourdhui.getHours()+"-"+aujourdhui.getMinutes()+"-"+aujourdhui.getSeconds();
+			var narticle = {
+				dateAjout : d,
+				titre : $('input[name="titre"]').val(),
+				description : $('textarea[name="description"]').val(),
+				lien : {
+					site :  $('input[name="site"]').val(),
+					url  :  $('input[name="url"]').val(),
+					tags : []
+				}
+			};
+			var tagsArray = $('textarea[name="tags"]').val().split(' ');
+			for (var i = 0; i < tagsArray.length; i++) {
+				narticle.lien.tags.push({ tag : tagsArray[i]});
+			}
+			console.log("nouvel article : "+narticle);
+			daoArticle.add(narticle);
+			ajoute_article(narticle);
+			vide_champs();
+			return false;
+		});
+		
+		
+		$('form[name="recherche"]').submit(function() {
+			// alert($('input[name="titre"]').val());
+			if ($('input[name="rtag"]').val() == '') {
+				return false;
+			}
+			cache_articles();
+			getArticlesTag($('input[name="rtag"]').val());
+			vide_champs();
+			return false;
+		});
+		
+		var vide_champs = function() {
+			$('input[type="text"], textarea').val("");	
+		};
+		
+		var ajoute_article = function(article) {
+			console.log("affichage");
+			console.log(article);
+			var html = '<article id="'+article.key+'" class="nouveau" style="display: none;">'+
+							'<h2><a href="'+article.lien.url+'" rel="external">'+article.titre+' ('+article.lien.site+')</a></h2>'+
+							'<p>'+article.description+'</p>';
+			if (article.lien.tags.length > 0) {
+				html += '<ul class="tags">';	
+				for (var i=0; i<article.lien.tags.length; i++) {
+					html += '<li><a href="#">'+article.lien.tags[i].tag+'</a></li>';
+				}
+				html += '</ul>';	
+			}
+			html +=         '<a href="#" class="drop"></a>'+
+					   '</article>';
+			$('section#articles').prepend(html);
+			$('article.nouveau').slideDown('slow').removeClass('nouveau');
+		
+			$('a.drop').unbind('click').click(function() {
+				if (confirm("Supprimer définitivement cet article ?")) {
+					suppressionArticle($(this).parent().attr('id'));
+				}
+				return false;
+			});
+			
+			
+			$('a[rel="external"]').unbind('click').click(function(){
+			  this.target = "_blank";
+			});
+			
+			$('ul.tags li a').unbind('click').click(function(){
+				cache_articles();
+				getArticlesTag($(this).text());
+				return false;
+			});
+		};
+		
+		$('#dropAll').click(function() {
+			if (confirm("Voulez vous supprimer tous les articles du portail ? (action irréversible)")) {
+				daoArticle.clear();
+				daoLien.clear();
+				$('article').slideUp();
+			}
+		});
+		
+		var cache_articles = function() {
+			$('article').slideUp();
+		};
+		
+		var suppressionArticle = function(id) {
+			// TODO suppression dans portail
+			//$.when(daoArticle.remove(id)).then($('#'+id).slideUp());
+			daoArticle.remove(id);
+			$('#'+id).slideUp();
+		};
+		
+		$('a.drop').click(function() {
+			if (confirm("Voulez-vous supprimer définitivement cet article ?")) {
+				suppressionArticle($(this).parent().attr('id'));
+			}
+			return false;
+		});
+		
+		var getArticlesTag = function(tag) {
+			var monFiltre = new FiltreJPN();
+			// test 1 : je veux medor
+			monFiltre.where_foreign_array_contain("lien", "tags", "tag", tag);
+			daoArticle.getArticlesFiltres(monFiltre, ajoute_article);
+		};
+		
+		
+		daoArticle.getArticles(ajoute_article);
+	});
+</script>
+</body>
+</html>
