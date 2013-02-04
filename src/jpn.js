@@ -60,8 +60,7 @@ function JSpNConfigurationManager(dbname) {
 
 	/**
 	 * Ajout d'une configuration dans le manager
-	 * La description d'un ObjectStore est spécifié
-	 * dans 
+	 * @param description d'un object store
 	 */
 	this.add = function(description) {
 		// On assure l'unicité de la configuration 
@@ -75,7 +74,7 @@ function JSpNConfigurationManager(dbname) {
 	};
 
 	/**
-	 * Renvois le nom de la base de donnée
+con	 * @return le nom de la base de donnée concerné par cette figuation
 	 */ 
 	this.getDbName = function() {
 		return this._dbname;
@@ -98,6 +97,10 @@ function JSpNConfigurationManager(dbname) {
 
 	};
 
+	/**
+	 * @param le nom de la configuration que l'on veux récupérer
+	 * @return la configuration 
+	 */
 	this.getByDbName = function(name) {
 		var i;
 		for (i = 0;
@@ -286,7 +289,12 @@ function JPNDao(configuration) {
 		});
 	};
 
-
+	/**
+	 * Execute un traitement sur un objet référencé par sa clé primaire
+	 * @param name le nom de l'object store à atteindre
+	 * @param id la clé primaire de l'objet à traiter
+	 * @param traitement le callback à éxecuter
+	 */
 	this.getByKey = function(name, id, traitement) {
 		$.when(self.getInstance()).then(function(){
 			var conf = self.manager.get(name);
@@ -311,7 +319,16 @@ function JPNDao(configuration) {
 			};
 		});
 	};
-
+	
+	/**
+	 * Récupération de l'ensemble des objets composant d'un objet passé en paramêtre
+	 * Reconstitution complète de l'arbre des dépendances
+	 * @param le nom de l'object store ou se trouve l'objet à reconstruire
+	 * @param index_cle l'index de l'objet à récupérer dans la liste des composants.
+	 * @param objet l'objet à reconstruire
+	 * @param callback le traitement à effectuer sur l'objet
+	 * @param filtre le seleccteur de données si nécessaire.
+	 */
 	this.getForeign = function(name, index_cle, objet, callback, filtre) {
 		$.when(this.getInstance()).then(function(instance) {
 			var conf = self.manager.get(name);
@@ -352,7 +369,10 @@ function JPNDao(configuration) {
 	 * Recherche d'un ensemble d'élements relativement
 	 * aux critère des recherche de l'élément de recherche
 	 * que l'on passe en paramêtre
-	 */
+  	 * @param name le nom de l'object store ou se trouve l'objet à reconstruire
+	 * @param traitement le traitement à éxecuter sur le jeu de donnée
+	 * @param le filtre à mettre ene place sur le jeu de donnée
+     */
 	this.get = function(name, traitement, filtre) {
 		$.when(self.getInstance()).then(function(){
 			var conf = self.manager.get(name);
@@ -382,10 +402,10 @@ function JPNDao(configuration) {
 		});
 	};
 
-
-
 	/**
-	 * Suppression d'une entité de la base de donnée 
+	 * Suppression d'une entité de l'objectStore 
+     * @param name le nom de l'object store à atteindre
+	 * @param id la clé de l'élément à supprimer	 
 	 */
 	this.remove = function(name, id) {
 		$.when(self.getInstance()).then(function() {
@@ -405,7 +425,8 @@ function JPNDao(configuration) {
 	};
 
 	/**
-	 * Modification d'un objet de la base de donnée 
+	 * Modification d'un objet de la base de donnée
+	 * @param name le nom de l'object store dans lequel se trouve l'objet à modifier
 	 */
 	this.update = function(name, object) {
 		var conf = self.manager.get(name);
