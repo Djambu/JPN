@@ -296,10 +296,7 @@ function JPNDao(configuration) {
 		console.log("[Error] " + event);
 	};
 
-	ncé par sa clé primaire
-	 * @param name le nom de l'object store à atteindre
-	 * @param id la clé primaire de l'objet à traiter
-	 * @param traitement le callback à éxecuter
+
 
 	/**
 	 * Mise à jour de la base de donnée si nécessaire
@@ -339,7 +336,7 @@ function JPNDao(configuration) {
 	 * Création d'une connexion avec la base de donnée IndexedDb
 	 * Utilisation d'une promesse pour gérer la pile d'appels 
 	 * asynchrone.
-	 * @return asynchrone, base de donnée 
+	 * @return promsesse de création d'une instance de base de donnée ouverte
 	 */
 	this.getInstance = function() {
 		var deferred = $.Deferred();
@@ -375,6 +372,7 @@ function JPNDao(configuration) {
 			};
 		}));
 	};
+
 
 
 	/**
@@ -537,7 +535,7 @@ function JPNDao(configuration) {
 				var cursor = event.target.result;
 				if (cursor) {
 					var object = cursor.value;
-					object.key = cursor.key;throw "Echec lors de l'insertion";
+					object.key = cursor.key;
 					dataSet.push(object);
 					cursor.continue();
 				} else {
@@ -576,7 +574,7 @@ function JPNDao(configuration) {
 	/**
 	 * Modification d'un objet de la base de donnée, pour ce faire, on supprime
 	 * l'ensemble des données concernant l'ancien objet et on stock le nouveau à 
-	 * sa place. /!\ La clé d'IDB en est modifiée.
+	 * sa place. /!\ La clé d'IDB en est modifiée
 	 * @param name le nom de l'object store dans lequel se trouve l'objet à modifier
 	 */
 	this.update = function(name, object) {
