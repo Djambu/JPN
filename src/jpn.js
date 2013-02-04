@@ -4,10 +4,12 @@ if ('webkitIndexedDB' in window) {
 	window.IDBKeyRange = window.webkitIDBKeyRange;
 }
 
-
-
-
-function JPNException(id) {
+/**
+ * Exception sous JPN
+ * @param chain
+ * @returns
+ */
+function JPNException(chain) {
 
 	var exceptionListe = {
 			1: "UndefinedResult: the object returned by transaction is undefined",
@@ -16,11 +18,21 @@ function JPNException(id) {
 			" with data structure different from that expected by the manager",
 			4: "NoDataFound: no data found from this selection statement",
 			5: "StorageError: error while trying to store an object",
-			6: "OpenDbError: error while opening a database"
+			6: "OpenDbError: error while opening a database",
+			7: "InvalidConfiguration: JSON configuration is not valid",
+			8: "InvalidExceptionSelected: exception id does not exist",
+			9: "DbNameMissing: missing the name of the database"
 	};
-
-	throw "[Exception]: "+exceptionListe[id];
-
+	
+	if (chain instanceof String) {
+		throw "[Exception]: " + chain;
+	} else {
+		if (!JQuery.inArray(chain, exceptionListe)) {
+			new JPNException(8);
+		} else {
+			throw "[Exception]: "+exceptionListe[chain];
+		}
+	}
 };
 
 /**
@@ -207,7 +219,7 @@ function JPNModel(state) {
  *	primary: "nom_cle_primaire",
  *	foreign: new Array(
  *		[
- *			new Array("nom_propriete_foreign", "simple | array" ),
+ *			new Array("nom_propriete_foreign", "one | many" ),
  *			...
  *		]
  *	  )
@@ -217,9 +229,13 @@ function JPNModel(state) {
  */
 function JPNConfigurationManager(dbname) {
 
+	
 	/** Nom de la base de donnée */
-	this._dbname = dbname;
-
+	if (!dbname) {
+		this._dbname = dbname;
+	} else {
+		new JPNException(9);	
+	}
 
 	/** Liste des configurations stockées dans le Manager*/
 	this._objectStores = new Array();
@@ -235,12 +251,41 @@ function JPNConfigurationManager(dbname) {
 		i < this._objectStores.length &&
 		description.name != this._objectStores[i].name; i++);
 		if (i == this._objectStores.length) {
-			this._objectStores.push(description);
+			if (this.isValid(description)) {
+				this._objectStores.push(description);
+			} else {
+				new JPNException(7);
+			}
 		}
 	};
 
+	
 	/**
-con	 * @return le nom de la base de donnée concerné par cette figuation
+	 * Indique si la configuration passée en paramêtre est correct au vue 
+	 * de la structure JSON attendue.
+	 * @param config le json de configuration
+	 * @return true/false si le fichier est correct.
+	 */
+	this.isValid = function(configuration) {
+		if (configuration.name && configuration.objectStore &&
+			configuration.state && configuration.primary &&
+			configuration.foreign && configuration.state instanceof Array &&
+			( configuration.foreign == null || configuration.foreign instanceof Array)) {
+			if (configuration.foreign != null && JQuery.inArray(configuration.primary, configuration.state)) {
+				for (var i = 0; i < configuration.foreign.length; i++) {
+					if (configuration.foreign[i] instanceof Array) {
+						return configuration.foreign[i][1] == "many" 
+							|| configuration.foreign[i][1] == "one"
+							|| JQuery.inArray(configuration[i][0], configuration.state);
+					}
+				}
+			}
+		}
+		return false;
+	};
+	
+	/**
+	 * @return le nom de la base de donnée concerné par cette configuation
 	 */ 
 	this.getDbName = function() {
 		return this._dbname;
@@ -276,7 +321,7 @@ con	 * @return le nom de la base de donnée concerné par cette figuation
 			return this._objectStores[i];
 		}
 
-	};self._defaultErrorLog
+	};
 
 	/**
 	 * Vérifie si l'object passé en paramètre correspond à la configuration
@@ -295,7 +340,12 @@ con	 * @return le nom de la base de donnée concerné par cette figuation
 	};
 }
 
-
+/**
+ * Data Access Object sur la base de donnée qu'identifie
+ * la configuration.
+ * @param configuration de la base de donnée
+ * @return dao sur la base de donnée objet 
+ */
 function JPNDao(configuration) {
 
 	/** Configuration manager de la DAO */
@@ -417,26 +467,35 @@ function JPNDao(configuration) {
 			if (conf['foreign'] != null) {
 				// extraction de l'objet à ajouter
 				for (var i = 0; i < conf.foreign.length; i++) {
-					var osForeign = conf.foreign[i][0];
-					var FConf = self.manager.get(conf.foreign[i][0]);
-					var fObject = object[osForeign];
-					// Si la clé n'existe pas 
+					
+					// gestion des clés one to one
+					if (conf.foreign[i][1] == "one") {
+						var osForeign = conf.foreign[i][0];
+						var FConf = self.manager.get(conf.foreign[i][0]);
+						var fObject = object[osForeign];
+						// Si la clé n'existe pas 
 
-					self.add(osForeign, fObject);
+						self.add(osForeign, fObject);
 
-					object[osForeign] = fObject[FConf['primary']];
+						object[osForeign] = fObject[FConf['primary']];
 
-					var storageRequest = self.instance.transaction([objectStoreName], "readwrite");
-					var storage = storageRequest.objectStore(objectStoreName);
-					storage.put(object);
+						var storageRequest = self.instance.transaction([objectStoreName], "readwrite");
+						var storage = storageRequest.objectStore(objectStoreName);
+						storage.put(object);
 
-					storageRequest.oncomplete = function(event) {
-						console.log("Succès de l'ajout de l'objet dans " + objectStoreName);
-					};
+						storageRequest.oncomplete = function(event) {
+							console.log("Succès de l'ajout de l'objet dans " + objectStoreName);
+						};
 
-					storageRequest.onerror = function() {
-						new JPNException(5);
-					};
+						storageRequest.onerror = function() {
+							new JPNException(5);
+						};
+					} 
+					// Gestion des clés many
+					else if (conf.foreign[i][1] == "many") {
+						
+					} 
+					
 				}
 			} else {
 
