@@ -1,5 +1,5 @@
 // JavaScript Document
-var config = new JSpNConfigurationManager("appliJPNarticles");
+var config = new JPNConfigurationManager("appliJPNarticles");
 config.add({
   name: "article",
 	objectStore: "articledb",
