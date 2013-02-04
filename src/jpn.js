@@ -357,8 +357,8 @@ function JPNDao(configuration) {
 	/** Instance unique de la base de donnée courante */
 	this.instance = null;
 
+	/** prototype */
 	var self = this;
-
 
 	/**
 	 * Gestion d'erreur des intéractions avec IndexedDB
@@ -367,26 +367,25 @@ function JPNDao(configuration) {
 		console.log("[Error] " + event);
 	};
 
-
-
 	/**
 	 * Mise à jour de la base de donnée si nécessaire
 	 */
 	this.majDb = function() {
-		$.when(this.getInstance()).done(function() {
+		$.when(this.getInstance()).done(function(db) {
+			console.log(db);
 			var aAjouter = new Array();
 			for (var i = 0; i < self.manager._objectStores.length; i++) {
-				if (!self.instance.objectStoreNames.contains(self.manager._objectStores[i].objectStore)) {
+				if (!db.objectStoreNames.contains(self.manager._objectStores[i].objectStore)) {
 					aAjouter.push(self.manager._objectStores[i].objectStore);
 				}
 			}
-			if (aAjouter.length > 0) {
-				var version = self.instance.version + 1;
-				self.instance.close();
-				var request;
 
-				request = window.indexedDB.open(self.manager.getDbName() , version);
+			if (aAjouter.length > 0) {
+				var version = db.version + 1;
+				db.close();
+				var request = window.indexedDB.open(self.manager.getDbName() , version);
 				request.onupgradeneeded = function(event) {
+					console.log("Nouvel objectStore");
 					self.instance = event.target.result;
 					for (var i = 0; i < aAjouter.length; i++) {
 						var conf = self.manager.getByDbName(aAjouter[i]);
@@ -407,20 +406,22 @@ function JPNDao(configuration) {
 	 * Création d'une connexion avec la base de donnée IndexedDb
 	 * Utilisation d'une promesse pour gérer la pile d'appels 
 	 * asynchrone.
-	 * @return promsesse de création d'une instance de base de donnée ouverte
+	 * @return promesse de création d'une instance de base de donnée ouverte
 	 */
 	this.getInstance = function() {
 		var deferred = $.Deferred();
-		var openRequest = window.indexedDB.open(this.manager.getDbName());
-
-		openRequest.onsuccess = function(event) {
-			self.instance = event.target.result;
-			deferred.resolve(self.instance);	
-		};
-		openRequest.onerror = function(event) {
-			new JPNException(6);
-		};
-
+		if (this.instance instanceof IDBDatabase) {
+			deferred.resolve(this.instance);
+		} else {
+			var openRequest = window.indexedDB.open(this.manager.getDbName());
+			openRequest.onsuccess = function(event) {
+				this.instance = event.target.result;
+				deferred.resolve(this.instance);	
+			};
+			openRequest.onerror = function(event) {
+				new JPNException(6);
+			};
+		}
 		return deferred.promise();
 	};
 
@@ -430,14 +431,14 @@ function JPNDao(configuration) {
 	 * @param name le nom de l'object store à vider
 	 */
 	this.clear = function(name) {
-		$.when(this.getInstance().then(function() {
+		$.when(this.getInstance().then(function(db) {
 			var conf = self.manager.get(name);
 			if (conf == null) {
 				new JPNException(2);
 			}
 
 			var objectStoreName = conf.objectStore;
-			var request = self.instance.transaction([objectStoreName], "readwrite");
+			var request = db.transaction([objectStoreName], "readwrite");
 			var objectStore = request.objectStore(objectStoreName);
 			objectStore.clear();
 			request.oncomplete = function() {
@@ -479,10 +480,9 @@ function JPNDao(configuration) {
 						// Si la clé n'existe pas 
 
 						self.add(osForeign, fObject);
-
 						object[osForeign] = fObject[FConf['primary']];
 
-						var storageRequest = self.instance.transaction([objectStoreName], "readwrite");
+						var storageRequest = db.transaction([objectStoreName], "readwrite");
 						var storage = storageRequest.objectStore(objectStoreName);
 						storage.put(object);
 
@@ -502,7 +502,7 @@ function JPNDao(configuration) {
 				}
 			} else {
 
-				var storageRequest = self.instance.transaction([objectStoreName], "readwrite");
+				var storageRequest = db.transaction([objectStoreName], "readwrite");
 				var storage = storageRequest.objectStore(objectStoreName);
 				storage.put(object);
 
@@ -526,13 +526,13 @@ function JPNDao(configuration) {
 	 * @param traitement le callback à éxecuter
 	 */
 	this.getByKey = function(name, id, traitement) {
-		$.when(self.getInstance()).then(function(){
+		$.when(self.getInstance()).then(function(db) {
 			var conf = self.manager.get(name);
 			if (conf == null) {
 				new JPNException(2);
 			}
 
-			var transact = self.instance.transaction([conf.objectStore], "readonly");
+			var transact = db.transaction([conf.objectStore], "readonly");
 			var objectStore = transact.objectStore(conf.objectStore).index(conf.primary);
 
 			var request = objectStore.get(id);
@@ -561,7 +561,7 @@ function JPNDao(configuration) {
 	 * @param filtre le seleccteur de données si nécessaire.
 	 */
 	this.getForeign = function(name, index_cle, objet, callback, filtre) {
-		$.when(this.getInstance()).then(function(instance) {
+		$.when(this.getInstance()).then(function(db) {
 			var conf = self.manager.get(name);
 			if (conf == null) {
 				new JPNException();
@@ -575,7 +575,7 @@ function JPNDao(configuration) {
 			} else {
 				var fConf = self.manager.get(conf.foreign[index_cle][0]);
 
-				var transact = self.instance.transaction([fConf.objectStore], "readonly");
+				var transact = db.transaction([fConf.objectStore], "readonly");
 				var objectStore = transact.objectStore(fConf.objectStore).index(fConf.primary);
 
 				var request = objectStore.get(objet[conf.foreign[index_cle][0]]);
@@ -605,13 +605,13 @@ function JPNDao(configuration) {
 	 * @param le filtre à mettre ene place sur le jeu de donnée
 	 */
 	this.get = function(name, traitement, filtre) {
-		$.when(self.getInstance()).then(function(){
+		$.when(self.getInstance()).then(function(db){
 			var conf = self.manager.get(name);
 			if (conf == null) {
 				new JPNException(2);
 			}
 
-			var objectStore = self.instance.transaction([conf.objectStore], "readonly")
+			var objectStore = db.transaction([conf.objectStore], "readonly")
 			.objectStore(conf.objectStore);
 			var dataSet = [];
 			var cur = objectStore.openCursor();
