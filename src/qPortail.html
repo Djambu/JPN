@@ -8,7 +8,7 @@
 </head>
 <body>
 <header>
-  <h1><span>My portal</span></h1>
+	<h1><span>My portal</span></h1>
     <div id="presentation">
     <p><span class="q">"Q"</span> vous permet de conserver toutes les choses intéressantes que vous dénichez sur la toile et que vous souhaitez [re-]consulter plus tard<br/>Que ce soit des articles de presse, de sites e-commerce, de blog, de veille technologique, etc...<br/>Ne saturez plus vos favoris, et retrouvez facilement chaque article !</p>
     </div>
@@ -48,7 +48,6 @@
 </section>
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
 <script src="jpn.js"></script>
-<script src="filtre.js"></script>
 <script src="article.js"></script>
 <script>
 	$(document).ready(function() {
@@ -165,7 +164,7 @@
 		});
 		
 		var getArticlesTag = function(tag) {
-			var monFiltre = new FiltreJPN();
+			var monFiltre = new JPNFiltre();
 			// test 1 : je veux medor
 			monFiltre.where_foreign_array_contain("lien", "tags", "tag", tag);
 			daoArticle.getArticlesFiltres(monFiltre, ajoute_article);
