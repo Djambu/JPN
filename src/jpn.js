@@ -27,7 +27,7 @@ function JPNException(chain) {
 	if (chain instanceof String) {
 		throw "[Exception]: " + chain;
 	} else {
-		if (!JQuery.inArray(chain, exceptionListe)) {
+		if (!jQuery.inArray(chain, exceptionListe)) {
 			new JPNException(8);
 		} else {
 			throw "[Exception]: "+exceptionListe[chain];
@@ -231,7 +231,7 @@ function JPNConfigurationManager(dbname) {
 
 	
 	/** Nom de la base de donnée */
-	if (!dbname) {
+	if (dbname) {
 		this._dbname = dbname;
 	} else {
 		new JPNException(9);	
@@ -268,19 +268,22 @@ function JPNConfigurationManager(dbname) {
 	 */
 	this.isValid = function(configuration) {
 		if (configuration.name && configuration.objectStore &&
-			configuration.state && configuration.primary &&
-			configuration.foreign && configuration.state instanceof Array &&
+			configuration.state && configuration.primary
+			&& configuration.state instanceof Array &&
 			( configuration.foreign == null || configuration.foreign instanceof Array)) {
-			if (configuration.foreign != null && JQuery.inArray(configuration.primary, configuration.state)) {
-				for (var i = 0; i < configuration.foreign.length; i++) {
-					if (configuration.foreign[i] instanceof Array) {
-						return configuration.foreign[i][1] == "many" 
-							|| configuration.foreign[i][1] == "one"
-							|| JQuery.inArray(configuration[i][0], configuration.state);
-					}
-				}
+			if ((configuration.foreign instanceof Array) 
+				 && jQuery.inArray(configuration.primary, configuration.state)) {
+				var i;
+				for (var i = 0; i < configuration.foreign.length
+						&& configuration.foreign[i][1] == "many" 
+						|| configuration.foreign[i][1] == "one"
+						|| jQuery.inArray(configuration[i][0], configuration.state); 
+					i++);
+				return i == configuration.foreign.length;
 			}
+			return true;
 		}
+		
 		return false;
 	};
 	
@@ -628,7 +631,7 @@ function JPNDao(configuration) {
 				};
 			};
 			
-			on.onerror = self._defaultErrorLog;
+			cur.onerror = self._defaultErrorLog;
 		});
 	};
 
