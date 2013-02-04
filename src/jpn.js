@@ -275,9 +275,9 @@ function JPNConfigurationManager(dbname) {
 				 && jQuery.inArray(configuration.primary, configuration.state)) {
 				var i;
 				for (var i = 0; i < configuration.foreign.length
-						&& configuration.foreign[i][1] == "many" 
-						|| configuration.foreign[i][1] == "one"
-						|| jQuery.inArray(configuration[i][0], configuration.state); 
+						&& (configuration.foreign[i][1] == "many" 
+						|| configuration.foreign[i][1] == "one")
+						&& jQuery.inArray(configuration[i][0], configuration.state); 
 					i++);
 				return i == configuration.foreign.length;
 			}
@@ -414,6 +414,21 @@ function JPNDao(configuration) {
 			deferred.resolve(this.instance);
 		} else {
 			var openRequest = window.indexedDB.open(this.manager.getDbName());
+			openRequest.onupgradeneeded = function(event) {
+				console.log("Nouvel objectStore");
+				this.instance = event.target.result;
+				console.log(self.manager);
+				for (var i = 0; i < self.manager._objectStores.length; i++) {
+					this.instance.createObjectStore(self.manager._objectStores[i].objectStore, {
+						keypath: self.manager._objectStores[i].primary, 
+						autoIncrement: true
+					}).createIndex(self.manager._objectStores[i].primary,
+								 self.manager._objectStores[i].primary, { unique: true });
+					console.log("Création de " + self.manager._objectStores[i].objectStore 
+							+ " avec pour clé " + self.manager._objectStores[i].primary);
+				}
+				deferred.resolve(this.instance);			
+			}; 
 			openRequest.onsuccess = function(event) {
 				this.instance = event.target.result;
 				deferred.resolve(this.instance);	
@@ -467,41 +482,41 @@ function JPNDao(configuration) {
 			}
 
 			var objectStoreName = conf.objectStore;
-
+			
 			if (conf['foreign'] != null) {
 				// extraction de l'objet à ajouter
 				for (var i = 0; i < conf.foreign.length; i++) {
-					
-					// gestion des clés one to one
-					if (conf.foreign[i][1] == "one") {
-						var osForeign = conf.foreign[i][0];
-						var FConf = self.manager.get(conf.foreign[i][0]);
-						var fObject = object[osForeign];
-						// Si la clé n'existe pas 
-
-						self.add(osForeign, fObject);
-						object[osForeign] = fObject[FConf['primary']];
-
-						var storageRequest = db.transaction([objectStoreName], "readwrite");
-						var storage = storageRequest.objectStore(objectStoreName);
-						storage.put(object);
-
-						storageRequest.oncomplete = function(event) {
-							console.log("Succès de l'ajout de l'objet dans " + objectStoreName);
-						};
-
-						storageRequest.onerror = function() {
-							new JPNException(5);
-						};
-					} 
-					// Gestion des clés many
-					else if (conf.foreign[i][1] == "many") {
-						
-					} 
-					
+					if (object[conf.foreign[i][0]] != null) {
+						// gestion des clés one to one
+						if (conf.foreign[i][1] == "one") {
+							var osForeign = conf.foreign[i][0];
+							var FConf = self.manager.get(conf.foreign[i][0]);
+							var fObject = object[osForeign];
+							// Si la clé n'existe pas 
+	
+							self.add(osForeign, fObject);
+							object[osForeign] = fObject[FConf['primary']];
+						} 
+						// Gestion des clés many
+						else if (conf.foreign[i][1] == "many") {
+							//TODO
+						} 
+					}
 				}
-			} else {
+		
+				var storageRequest = db.transaction([objectStoreName], "readwrite");
+				var storage = storageRequest.objectStore(objectStoreName);
+				storage.put(object);
+				console.log(object);
+				storageRequest.oncomplete = function(event) {
+					console.log("Succès de l'ajout de l'objet dans " + objectStoreName);
+				};
 
+				storageRequest.onerror = function() {
+					new JPNException(5);
+				};
+			} else {
+				
 				var storageRequest = db.transaction([objectStoreName], "readwrite");
 				var storage = storageRequest.objectStore(objectStoreName);
 				storage.put(object);
@@ -611,8 +626,7 @@ function JPNDao(configuration) {
 				new JPNException(2);
 			}
 
-			var objectStore = db.transaction([conf.objectStore], "readonly")
-			.objectStore(conf.objectStore);
+			var objectStore = db.transaction([conf.objectStore], "readonly").objectStore(conf.objectStore);
 			var dataSet = [];
 			var cur = objectStore.openCursor();
 			cur.onsuccess = function(event) {
