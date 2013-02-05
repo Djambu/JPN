@@ -36,150 +36,6 @@ function JPNException(chain) {
 };
 
 /**
- * Filtre de recherche pour les données de selection JPN
- * @returns un filtre sur les données extraites
- */
-function JPNFiltre() {
-
-	this._champs_s = new Array();
-	this._criteresEt = new Array();
-	this._criteresFo = new Array();
-	this._criteresFac = new Array();
-
-
-	this.reset = function() {
-		this._champs_s = new Array();
-		this._criteresEt = new Array();
-		this._criteresFo = new Array();
-		this._criteresFac = new Array();
-	};
-
-	this.select = function() {
-		for (var i = 0; i < arguments.length; i++) {
-			this._champs_s.push(arguments[i]);
-		}
-	};
-
-	this.where = function(c, o, v) {
-		this._criteresEt.push({ champ : c, operateur : o, valeur : v });
-	};
-
-	this.where_foreign = function(f, c, o, v) {
-		this._criteresFo.push({ foreign :f, champ : c, operateur : o, valeur : v });
-	};
-
-	this.where_foreign_array_contain = function(f, t, c, v) {
-		this._criteresFac.push({ foreign :f, tableau : t, champ : c, valeur : v });
-	};
-
-	// cheat pour utiliser la fonction contains sur un tableau
-	Array.prototype.contains = function(obj) {
-		var i;
-		for ( i = 0; ( i<this.length ) && !( this[i]===obj ); i++);
-		return i!=this.length;
-	}
-
-	this.check = function(filtre, aVerifier) {
-
-		// critère &
-		for (var i=0; i<filtre._criteresEt.length; i++) {
-			var ss_filtre = filtre._criteresEt[i];
-
-			switch (ss_filtre.operateur) {
-			case '=' :
-				//
-				if (aVerifier[ss_filtre.champ] != ss_filtre.valeur) {
-					return false;
-				}
-				break;
-			case '>' :
-				//
-				if (aVerifier[ss_filtre.champ] <= ss_filtre.valeur) {
-					return false;
-				}
-				break;
-			case '<' :
-				//
-				if (aVerifier[ss_filtre.champ] >= ss_filtre.valeur) {
-					return false;
-				}
-				break;
-			case '>=' :
-				//
-				if (aVerifier[ss_filtre.champ] < ss_filtre.valeur) {
-					return false;
-				}
-				break;
-			case '<=' :
-				//
-				if (aVerifier[ss_filtre.champ] > ss_filtre.valeur) {
-					return false;
-				}
-				break;
-			}
-		}
-		// critère sur sous-objet
-
-		for (var i=0; i<filtre._criteresFo.length; i++) {
-			var ss_filtre = filtre._criteresFo[i];
-			switch (ss_filtre.operateur) {
-			case '=' :
-				//
-				if (aVerifier[ss_filtre.foreign][ss_filtre.champ] != ss_filtre.valeur) {
-					return false;
-				}
-				break;
-			case '>' :
-				//
-				if (aVerifier[ss_filtre.foreign][ss_filtre.champ] <= ss_filtre.valeur) {
-					return false;
-				}
-				break;
-			case '<' :
-				//
-				if (aVerifier[ss_filtre.foreign][ss_filtre.champ] >= ss_filtre.valeur) {
-					return false;
-				}
-				break;
-			case '>=' :
-				//
-				if (aVerifier[ss_filtre.foreign][ss_filtre.champ] < ss_filtre.valeur) {
-					return false;
-				}
-				break;
-			case '<=' :
-				//
-				if (aVerifier[ss_filtre.foreign][ss_filtre.champ] > ss_filtre.valeur) {
-					return false;
-				}
-				break;
-			}
-		}
-
-		// critere sur tableau dun sous objet
-
-		for (var i=0; i<filtre._criteresFac.length; i++) {
-			var ss_filtre = filtre._criteresFac[i];
-
-			var f = aVerifier[ss_filtre.foreign];
-			var tab = f[ss_filtre.tableau];
-
-			var z=0;
-			for (z=0; z<tab.length && tab[z][ss_filtre.champ]!= ss_filtre.valeur; z++);
-			if (z==tab.length) {
-				return false;
-			}
-		}
-
-		// ELSE else else
-		return true;
-
-	};
-
-
-}
-
-/**
  * Un modèle abstrait est une construction simpliste basée sur le souhait
  * que le développeur la réutilisant hérite de sa structure pour mettre 
  * en place un modèle qui lui est propre au sein duquel un ensemble de 
@@ -691,3 +547,180 @@ function JPNDao(configuration) {
 
 };
 
+
+
+/**
+ * Filtre de recherche pour les données de selection JPN
+ * @returns un filtre sur les données extraites
+ */
+function JPNFiltre() {
+
+	/* 
+	 * Contraintes ajoutées sur les attributs de l'objet
+	 */
+	this._criteresEt = new Array();
+	/* 
+	 * Contraintes ajoutées sur les attributs des sous-objets de l'objet
+	 */
+	this._criteresFo = new Array();
+	/* 
+	 * Contraintes sur les attributs tableaux des sous-objets de l'objet
+	 */
+	this._criteresFac = new Array();
+
+	/**
+	 * Ajoute une contrainte sur un attribut de l'objet
+	 * @param att l'attribut sélectionné
+	 * @param ope l'opérateur de la contrainte ( = | != | > | < | >= | <= )
+	 * @param val la valeur de la contrainte
+	 */
+	this.where = function(att, ope, val) {
+		this._criteresEt.push({ champ : att, operateur : ope, valeur : val });
+	};
+
+	/**
+	 * Ajoute une contrainte sur un attribut d'une cle etrangere de l'objet
+	 * @param fo  l'attribut clé étrangère de l'objet
+	 * @param att l'attribut de la clé étrangère sélectionné
+	 * @param ope l'opérateur de la contrainte ( = | != | > | < | >= | <= )
+	 * @param val la valeur de la contrainte
+	 */
+	this.where_foreign = function(fo, att, ope, val) {
+		this._criteresFo.push({ foreign :fo, champ : att, operateur : ope, valeur : val });
+	};
+
+	/**
+	 * Ajoute une contrainte sur un attribut d'une cle etrangere de l'objet
+	 * @param fo  l'attribut clé étrangère de l'objet
+	 * @param tab l'attribut tableau de la clé étrangère sélectionné
+	 * @param att l'attribut interne du tableau
+	 * @param val la valeur qui doit être contenu
+	 */
+	this.where_foreign_array_contain = function(fo, tab, att, val) {
+		this._criteresFac.push({ foreign : fo, tableau : tab, champ : att, valeur : val });
+	};
+
+	Array.prototype.contains = function(obj) {
+		var i;
+		for ( i = 0; ( i<this.length ) && !( this[i]===obj ); i++);
+		return i!=this.length;
+	}
+
+	/**
+	 * Vérifie que l'objet passé en arguments respecte
+	 * toutes les contraintes ajoutées au filtre
+	 * @param filtre le filtre courant (utilisé pour appel dans callbacks)
+	 * @param aVerifier l'objet à vérifier
+	 * @return true si l'objet répond à toutes les contraintes, false sinon
+	 */
+	this.check = function(filtre, aVerifier) {
+
+		// critère &
+		for (var i=0; i<filtre._criteresEt.length; i++) {
+			var ss_filtre = filtre._criteresEt[i];
+
+			switch (ss_filtre.operateur) {
+			case '=' :
+				//
+				if (aVerifier[ss_filtre.champ] != ss_filtre.valeur) {
+					return false;
+				}
+				break;
+			case '!=' :
+				//
+				if (aVerifier[ss_filtre.champ] == ss_filtre.valeur) {
+					return false;
+				}
+				break;
+			case '>' :
+				//
+				if (aVerifier[ss_filtre.champ] <= ss_filtre.valeur) {
+					return false;
+				}
+				break;
+			case '<' :
+				//
+				if (aVerifier[ss_filtre.champ] >= ss_filtre.valeur) {
+					return false;
+				}
+				break;
+			case '>=' :
+				//
+				if (aVerifier[ss_filtre.champ] < ss_filtre.valeur) {
+					return false;
+				}
+				break;
+			case '<=' :
+				//
+				if (aVerifier[ss_filtre.champ] > ss_filtre.valeur) {
+					return false;
+				}
+				break;
+			}
+		}
+		// critère sur sous-objet
+
+		for (var i=0; i<filtre._criteresFo.length; i++) {
+			var ss_filtre = filtre._criteresFo[i];
+			switch (ss_filtre.operateur) {
+			case '=' :
+				//
+				if (aVerifier[ss_filtre.foreign][ss_filtre.champ] != ss_filtre.valeur) {
+					return false;
+				}
+				break;
+			case '!=' :
+				//
+				if (aVerifier[ss_filtre.foreign][ss_filtre.champ] == ss_filtre.valeur) {
+					return false;
+				}
+				break;
+			case '>' :
+				//
+				if (aVerifier[ss_filtre.foreign][ss_filtre.champ] <= ss_filtre.valeur) {
+					return false;
+				}
+				break;
+			case '<' :
+				//
+				if (aVerifier[ss_filtre.foreign][ss_filtre.champ] >= ss_filtre.valeur) {
+					return false;
+				}
+				break;
+			case '>=' :
+				//
+				if (aVerifier[ss_filtre.foreign][ss_filtre.champ] < ss_filtre.valeur) {
+					return false;
+				}
+				break;
+			case '<=' :
+				//
+				if (aVerifier[ss_filtre.foreign][ss_filtre.champ] > ss_filtre.valeur) {
+					return false;
+				}
+				break;
+			}
+		}
+
+		// critere sur tableau dun sous objet
+
+		for (var i=0; i<filtre._criteresFac.length; i++) {
+			var ss_filtre = filtre._criteresFac[i];
+
+			var f = aVerifier[ss_filtre.foreign];
+			var tab = f[ss_filtre.tableau];
+
+			var z=0;
+			for (z=0; z<tab.length && tab[z][ss_filtre.champ]!= ss_filtre.valeur; z++);
+			if (z==tab.length) {
+				return false;
+			}
+		}
+
+		// si l'objet correspond à tous les critères
+		return true;
+
+	};
+
+
+}
